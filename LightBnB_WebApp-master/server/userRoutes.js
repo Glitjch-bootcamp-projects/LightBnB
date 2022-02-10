@@ -23,7 +23,7 @@ module.exports = function(router, database) {
    * @param {String} email
    * @param {String} password encrypted
    */
-  const login =  function(email, password) {
+  const login = function(email, password) {
     return database.getUserWithEmail(email)
     .then(user => {
       if (bcrypt.compareSync(password, user.password)) {
@@ -39,8 +39,9 @@ module.exports = function(router, database) {
     login(email, password)
       .then(user => {
         if (!user) {
+          console.log('Routes: no user found!');
           res.send({error: "error"});
-          return;
+          return null;
         }
         req.session.userId = user.id;
         res.send({user: {name: user.name, email: user.email, id: user.id}});

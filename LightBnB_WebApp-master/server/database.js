@@ -1,6 +1,15 @@
 const properties = require('./json/properties.json');
 const users = require('./json/users.json');
 
+const { Pool } = require('pg');
+const pool = new Pool({
+  user: 'vagrant',
+  password: '123',
+  host: 'localhost',
+  database: 'lightbnb'
+});
+
+
 /// Users
 
 /**
@@ -9,17 +18,13 @@ const users = require('./json/users.json');
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function(email) {
-  let user;
-  for (const userId in users) {
-    user = users[userId];
-    if (user.email.toLowerCase() === email.toLowerCase()) {
-      break;
-    } else {
-      user = null;
-    }
-  }
-  return Promise.resolve(user);
-}
+ 
+  const emailQuery = `SELECT * FROM users WHERE email = $1`;
+  const values = [email];
+  return pool.query(emailQuery, values)
+    .then(result => result.rows[0])
+    .catch(err => console.log(err));
+};
 exports.getUserWithEmail = getUserWithEmail;
 
 /**
@@ -27,8 +32,13 @@ exports.getUserWithEmail = getUserWithEmail;
  * @param {string} id The id of the user.
  * @return {Promise<{}>} A promise to the user.
  */
+
 const getUserWithId = function(id) {
-  return Promise.resolve(users[id]);
+  const idQuery = `SELECT * FROM users WHERE id = $1`;
+  const values = [id];
+  return pool.query(idQuery, values)
+    .then(result => result.rows[0])
+    .catch(err => console.log(err));
 }
 exports.getUserWithId = getUserWithId;
 
@@ -39,10 +49,11 @@ exports.getUserWithId = getUserWithId;
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser =  function(user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const userInsert = `INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *;`;
+  const values = [user.name, user.email, user.password];
+  return pool.query(userInsert, values)
+    .then(result => result.rows[0])
+    .catch(error => console.log(error))
 }
 exports.addUser = addUser;
 
@@ -66,13 +77,13 @@ exports.getAllReservations = getAllReservations;
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-const getAllProperties = function(options, limit = 10) {
-  const limitedProperties = {};
-  for (let i = 1; i <= limit; i++) {
-    limitedProperties[i] = properties[i];
-  }
-  return Promise.resolve(limitedProperties);
-}
+const getAllProperties = (options, limit = 10) => {
+  
+  const getAllQuery = `SELECT * FROM properties LIMIT $1`;
+  return pool.query(getAllQuery, [limit])
+  .then(result => result.rows)
+  .catch(err => err.message);
+};
 exports.getAllProperties = getAllProperties;
 
 
