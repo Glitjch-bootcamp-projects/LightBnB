@@ -92,12 +92,12 @@ const getAllProperties = (options, limit = 10) => {
 
   if (options.minimum_price_per_night) {
     queryParams.push(options.minimum_price_per_night);
-    queryString += `AND cost_per_night >= $${queryParams.length} `;
+    queryString += `AND cost_per_night >= $${queryParams.length} * 100`;
   };
 
   if (options.maximum_price_per_night) {
     queryParams.push(options.maximum_price_per_night);
-    queryString += `AND cost_per_night <= $${queryParams.length} `;
+    queryString += `AND cost_per_night <= $${queryParams.length} * 100`;
   };
 
   if (options.owner_id) {
@@ -131,7 +131,7 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function (property) {
-
+  const { parking_spaces, number_of_bathrooms, number_of_bedrooms } = property;
   const values = [
     property.title,
     property.description,
@@ -143,12 +143,9 @@ const addProperty = function (property) {
     property.province,
     property.post_code,
     property.country,
-    property.parking_spaces,
-    property.number_of_bathrooms,
-    property.number_of_bedrooms,
     property.owner_id
   ];
-  const addPropQuery = `INSERT INTO properties (
+  let addPropQuery = `INSERT INTO properties (
     title,
     description,
     thumbnail_photo_url,
@@ -159,12 +156,39 @@ const addProperty = function (property) {
     province,
     post_code,
     country,
-    parking_spaces,
-    number_of_bathrooms,
-    number_of_bedrooms,
     owner_id
-    ) 
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *;`;
+    `;
+  let addEntry1 = 0;
+  if (parking_spaces) {
+    values.push(parking_spaces);
+    addPropQuery += `, parking_spaces`;
+    addEntry1 = values.length;
+  }
+  let addEntry2 = 0;
+  if (number_of_bathrooms) {
+    values.push(number_of_bathrooms);
+    addPropQuery += `, number_of_bathrooms`;
+    addEntry2 = values.length;
+  }
+  let addEntry3 = 0;
+  if (number_of_bedrooms) {
+    values.push(number_of_bedrooms);
+    addPropQuery += `, number_of_bedrooms`;
+    addEntry3 = values.length;
+  }
+  addPropQuery += `) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`
+
+  if (parking_spaces) {
+    addPropQuery += `, $${addEntry1}`;
+  }
+  if (number_of_bathrooms) {
+    addPropQuery += `, $${addEntry2}`;
+  }
+  if (number_of_bedrooms) {
+    addPropQuery += `, $${addEntry3}`;
+  }
+  addPropQuery += `) RETURNING *;`;
+
   console.log(addPropQuery, values);
   return pool.query(addPropQuery, values)
     .then(result => result.rows[0])
