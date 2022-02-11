@@ -82,14 +82,49 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = (options, limit = 10) => {
+  let queryString = ` SELECT properties.*, avg(property_reviews.rating) as average_rating FROM properties JOIN property_reviews ON properties.id = property_id `;
+  const queryParams = [];
 
-  const getAllQuery = `SELECT * FROM properties LIMIT $1`;
-  return pool.query(getAllQuery, [limit])
-    .then(result => result.rows)
-    .catch(err => err.message);
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    queryString += `WHERE city LIKE $${queryParams.length} `;
+  };
+
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night);
+    queryString += `AND cost_per_night >= $${queryParams.length} `;
+  };
+
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night);
+    queryString += `AND cost_per_night <= $${queryParams.length} `;
+  };
+
+  if (options.owner_id) {
+    queryParams.push(options.owner_id);
+    queryString += `AND owner_id = $${queryParams.length} `;
+  };
+
+  queryString += `GROUP BY properties.id `;
+
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    queryString += `HAVING AVG(property_reviews.rating) >= $${queryParams.length} `
+  };
+
+  queryParams.push(limit);
+  queryString += `ORDER BY cost_per_night LIMIT $${queryParams.length};`;
+
+  console.log(queryString, queryParams);
+
+  return pool.query(queryString, queryParams)
+    .then((res) => {
+      console.log('+++++++++++++ query', res.rows);
+      return res.rows;
+    })
+    .catch(error => console.log(error));
 };
 exports.getAllProperties = getAllProperties;
-
 
 /**
  * Add a property to the database
